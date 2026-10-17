@@ -1,0 +1,9 @@
+{
+  "name": "爆弾探し",
+  "short_name": "爆弾探し",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#111827",
+  "lang": "ja"
+}

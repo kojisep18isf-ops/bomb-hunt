@@ -36,27 +36,50 @@ h1{font-size:20px;margin:0}
 .modal h2{margin:0 0 8px;font-size:28px}.modal p{margin:7px 0 18px;color:#475569}
 .modal button{width:100%;border:0;border-radius:11px;padding:13px;margin-top:8px;background:#2563eb;color:#fff;font-weight:800}
 .tip{font-size:12px;color:#94a3b8;text-align:center;margin:9px 0 0}
+.home{min-height:calc(100vh - 40px);display:flex;flex-direction:column;justify-content:center;gap:16px}
+.home-card{background:#1e293b;border-radius:18px;padding:28px 18px;text-align:center;box-shadow:0 10px 30px #0004}
+.home-card h1{font-size:32px;margin:0 0 8px}.home-card p{color:#94a3b8;margin:0 0 22px}
+.home-actions{display:flex;flex-direction:column;gap:10px}
+.home-actions button{border:0;border-radius:12px;padding:15px;background:#334155;color:#fff;font-weight:800;font-size:17px}
+.home-actions .primary{background:#2563eb!important}
+.home-levels{display:none;background:#1e293b;border-radius:12px;padding:12px}
+.home-levels h2{font-size:16px;margin:0 0 8px}
 @media (min-width:600px){.app{padding-top:24px}.levels{grid-template-columns:repeat(10,1fr)}}
 </style>
 </head>
 <body>
 <div class="app">
-  <header><h1>💣 爆弾探し</h1><div id="levelTitle">LEVEL 1</div></header>
-  <div class="stats">
-    <div class="stat"><small>残り時間</small><strong id="time">100</strong></div>
-    <div class="stat"><small>爆弾</small><strong id="bombs">5 / 5</strong></div>
-    <div class="stat"><small>ベスト</small><strong id="best">--</strong></div>
-  </div>
-  <div class="board-wrap"><div id="board" class="board" aria-label="27×27ゲーム盤"></div></div>
-  <div class="controls">
-    <button id="restart">↻ このレベルをやり直す</button>
-    <button id="levelsBtn">レベル選択</button>
-  </div>
-  <div class="panel" id="levelsPanel" style="display:none">
-    <h2>レベル選択</h2>
-    <div id="levels" class="levels"></div>
-  </div>
-  <p class="tip">タップ：開く　／　長押し：爆弾マーク</p>
+  <section id="homeScreen" class="home">
+    <div class="home-card">
+      <div style="font-size:52px">💣</div>
+      <h1>爆弾探し</h1>
+      <p>27×27のマスから爆弾を探そう</p>
+      <div class="home-actions">
+        <button id="homeStart" class="primary">ゲームスタート</button>
+        <button id="homeLevelBtn">レベル選択</button>
+      </div>
+    </div>
+    <div id="homeLevels" class="home-levels">
+      <h2>レベル選択</h2>
+      <div id="levels" class="levels"></div>
+    </div>
+    <p class="tip">レベルを選んでからゲームをスタートできます</p>
+  </section>
+
+  <section id="gameScreen" style="display:none">
+    <header><h1>💣 爆弾探し</h1><div id="levelTitle">LEVEL 1</div></header>
+    <div class="stats">
+      <div class="stat"><small>残り時間</small><strong id="time">100</strong></div>
+      <div class="stat"><small>爆弾</small><strong id="bombs">5 / 5</strong></div>
+      <div class="stat"><small>ベスト</small><strong id="best">--</strong></div>
+    </div>
+    <div class="board-wrap"><div id="board" class="board" aria-label="27×27ゲーム盤"></div></div>
+    <div class="controls">
+      <button id="restart">↻ このレベルをやり直す</button>
+      <button id="levelsBtn">ホーム</button>
+    </div>
+    <p class="tip">タップ：開く　／　長押し：爆弾マーク</p>
+  </section>
 </div>
 
 <div id="overlay" class="overlay">
@@ -65,7 +88,7 @@ h1{font-size:20px;margin:0}
     <p id="resultText"></p>
     <button id="retryBtn">もう一度挑戦</button>
     <button id="nextBtn" class="primary">次のレベル</button>
-    <button id="backBtn" style="background:#334155">レベル選択</button>
+    <button id="backBtn" style="background:#334155">ホームへ</button>
   </div>
 </div>
 
@@ -90,14 +113,28 @@ function neighbors(i){
   }
   return a;
 }
-function start(lvl=1){
+function showHome(){
+  stopTimer();
+  document.getElementById("overlay").style.display="none";
+  document.getElementById("gameScreen").style.display="none";
+  document.getElementById("homeScreen").style.display="flex";
+  document.getElementById("homeLevels").style.display="none";
+  renderLevels();
+}
+function showGame(){
+  document.getElementById("homeScreen").style.display="none";
+  document.getElementById("gameScreen").style.display="block";
+}
+function start(lvl=level){
   stopTimer(); level=lvl; bombs=bombCount(level); flags=0; opened=0; gameOver=false; hitIndex=-1; timeLeft=LIMIT;
+  showGame();
   board=Array.from({length:TOTAL},()=>({mine:false,open:false,flag:false,n:0}));
   const pool=[...Array(TOTAL).keys()];
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
   for(let i=0;i<bombs;i++) board[pool[i]].mine=true;
   for(let i=0;i<TOTAL;i++) board[i].n=neighbors(i).filter(j=>board[j].mine).length;
-  render(); updateUI(); timer=setInterval(()=>{if(gameOver)return;timeLeft=Math.max(0,timeLeft-.1);updateUI();if(timeLeft<=0)finish(false,"TIME UP");},100);
+  render(); updateUI();
+  timer=setInterval(()=>{if(gameOver)return;timeLeft=Math.max(0,timeLeft-.1);updateUI();if(timeLeft<=0)finish(false,"TIME UP");},100);
 }
 function render(){
   const el=document.getElementById("board"); el.innerHTML=""; cells=[];
@@ -125,7 +162,7 @@ function onDown(e){
   pressedIndex=Number(e.currentTarget.dataset.i); pressMoved=false; longDone=false;
   clearTimeout(pressTimer); pressTimer=setTimeout(()=>{if(!pressMoved){longDone=true;toggleFlag(pressedIndex)}},450);
 }
-function onUp(e){clearTimeout(pressTimer); if(pressMoved||longDone)return; openCell(pressedIndex)}
+function onUp(){clearTimeout(pressTimer); if(pressMoved||longDone)return; openCell(pressedIndex)}
 function cancelPress(){clearTimeout(pressTimer);pressMoved=true}
 function toggleFlag(i){
   if(gameOver||board[i].open)return;
@@ -149,8 +186,6 @@ function floodOpen(startI){
 }
 function checkWin(){
   if(gameOver)return;
-  // 勝利条件：残っている未開封マスがすべて爆弾ならクリア。
-  // フラグは補助機能なので、フラグを立てなくてもクリアできる。
   if(opened===TOTAL-bombs)finish(true,"CLEAR!");
 }
 function finish(win,title){
@@ -186,16 +221,25 @@ function renderLevels(){
     const unlocked=l<=progress; if(!unlocked)b.classList.add("locked");
     if(best[l]!=null)b.classList.add("done"); if(l===level)b.classList.add("current");
     b.textContent=unlocked?`${l}${best[l]!=null?" ✓":""}`:`🔒`;
-    b.disabled=!unlocked; b.onclick=()=>{document.getElementById("levelsPanel").style.display="none";document.getElementById("overlay").style.display="none";start(l)};
+    b.disabled=!unlocked;
+    b.onclick=()=>{ document.getElementById("homeLevels").style.display="none"; start(l); };
     el.appendChild(b);
   }
 }
+document.getElementById("homeStart").onclick=()=>start(level);
+document.getElementById("homeLevelBtn").onclick=()=>{
+  const p=document.getElementById("homeLevels");
+  p.style.display=p.style.display==="none"?"block":"none";
+  renderLevels();
+};
 document.getElementById("restart").onclick=()=>start(level);
-document.getElementById("levelsBtn").onclick=()=>{const p=document.getElementById("levelsPanel");p.style.display=p.style.display==="none"?"block":"none";renderLevels()};
+document.getElementById("levelsBtn").onclick=()=>showHome();
 document.getElementById("retryBtn").onclick=()=>{document.getElementById("overlay").style.display="none";start(level)};
 document.getElementById("nextBtn").onclick=()=>{document.getElementById("overlay").style.display="none";start(Math.min(MAX_LEVEL,level+1))};
-document.getElementById("backBtn").onclick=()=>{document.getElementById("overlay").style.display="none";document.getElementById("levelsPanel").style.display="block";renderLevels()};
-renderLevels(); start(1);
+document.getElementById("backBtn").onclick=()=>showHome();
+
+renderLevels();
+showHome();
 if('serviceWorker' in navigator && location.protocol!=='file:') navigator.serviceWorker.register('./sw.js');
 </script>
 </body>
